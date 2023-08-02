@@ -113,7 +113,7 @@ change_wifi)
   COMMAND="netcom_configure_wifi.py iap_usb"
   ;;
 log_netcom)
-  COMMAND="netcom_rx_tx_decoder.py -l 959 -t 5 -i ${MAC_ADDRESS}"
+  COMMAND="netcom_rx_tx_decoder.py -l 959 -t 2 -i ${MAC_ADDRESS}"
   ;;
 esac
 
