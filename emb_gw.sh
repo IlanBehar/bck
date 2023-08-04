@@ -4,6 +4,7 @@ declare SECRET="42dac320ff3fee8ea3ece46024b20b38"
 declare MULTI_JOBS="y"
 declare ENABLE_TRACE="y"
 declare MAC_ADDRESS="00:04:74:39:b6:7c"
+declare COMPARATED_BRANCH="master"
 
 # Log colors
 declare -r GREEN='\033[0;32m'
@@ -29,19 +30,20 @@ warning()
 
 usage()
 {
-  echo "Usage : ./emb_gw.sh [build|flash|connect|inte|prod|fpm|restore|forcebootload|change_wifi|log_netcom]"
+  echo "Usage : ./emb_gw.sh [generate_files|build|flash|connect|inte|prod|fpm|restore|forcebootload|change_wifi|log_netcom|test_heap_size|test_build_all]"
   echo "  -s : Specify secret"
   echo "  -m : Multy job (y or n)"
   echo "  -t : Enable trace (y or no)"
   echo "  -v : Firmware version"
   echo "  -a : MAC address"
+  echo "  -b : branch to compare for test. By default master is used"
   exit
 }
 
 declare -r ACTION=$1
 OPTIND=2
 
-while getopts "s:m:t:v:h:a:" option; do
+while getopts "s:m:t:v:h:a:b:" option; do
   case "${option}" in
   s) SECRET=${OPTARG}
      ;;
@@ -54,6 +56,8 @@ while getopts "s:m:t:v:h:a:" option; do
   v) FIRMWARE_VERSION=${OPTARG}
   ;;
   a) MAC_ADDRESS=${OPTARG}
+  ;;
+  b) COMPARATED_BRANCH=${OPTARG}
   ;;
   h) usage
      ;;
@@ -68,10 +72,12 @@ shift $((OPTIND-1))
 
 if [ -z ${ACTION+x} ]; then usage; fi
 
-if  [ "${ACTION}" != "build" ] && [ "${ACTION}" != "flash" ] && [ "${ACTION}" != "connect" ] && \
+if  [ "${ACTION}" != "generate_files" ] &&[ "${ACTION}" != "build" ] && \
+    [ "${ACTION}" != "flash" ] && [ "${ACTION}" != "connect" ] && \
     [ "${ACTION}" != "inte" ] && [ "${ACTION}" != "prod" ] && [ "${ACTION}" != "fpm" ] && \
     [ "${ACTION}" != "restore" ] && [ "${ACTION}" != "forcebootload" ] && \
-    [ "${ACTION}" != "change_wifi" ] && [ "${ACTION}" != "log_netcom" ] \
+    [ "${ACTION}" != "change_wifi" ] && [ "${ACTION}" != "log_netcom" ] && \
+    [ "${ACTION}" != "test_heap_size" ] && [ "${ACTION}" != "test_build_all" ] \
     ;then usage; fi
 
 if [ ${ACTION} == "build" ] || [ ${ACTION} == "flash" ];
@@ -85,6 +91,9 @@ fi
 
 declare COMMAND=""
 case "${ACTION}" in
+generate_files)
+  COMMAND="make prebuild_files"
+  ;;
 build)
   COMMAND="make nlg-stm32-v2 MULTI_JOBS=${MULTI_JOBS} ENABLE_TRACE=${ENABLE_TRACE} FIRMWARE_VERSION=${FIRMWARE_VERSION}"
   ;;
@@ -114,6 +123,15 @@ change_wifi)
   ;;
 log_netcom)
   COMMAND="netcom_rx_tx_decoder.py -l 959 -t 2 -i ${MAC_ADDRESS}"
+  ;;
+test_heap_size)
+COMMAND="make clean && git rebase \$(git merge-base HEAD ${COMPARATED_BRANCH}) -x 'git submodule update && make FIRMWARE_VERSION=4242 MULTI_JOBS=y nlgV2'"
+  ;;
+test_build_all)
+COMMAND="make clean &&
+                   git rebase \$(git merge-base HEAD ${COMPARATED_BRANCH}) -x 'git submodule update && make nlg-linux BUILD_EXECUTABLE=y BUILD_SHARED_LIBRARY_TEST=y BUILD_VARIANTS=bncx' &&
+                   git rebase \$(git merge-base HEAD ${COMPARATED_BRANCH}) -x 'git submodule update && make nlg-stm32-v2 FIRMWARE_VERSION=4242 MULTI_JOBS=y ENABLE_TRACE=y' &&
+                   git rebase \$(git merge-base HEAD ${COMPARATED_BRANCH}) -x 'git submodule update && make  -C apps test-nlg-abi-converter-nvm'"
   ;;
 esac
 

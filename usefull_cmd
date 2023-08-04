@@ -1,0 +1,9 @@
+Count occurence of unknown in dump
+make dump | grep unknown | wc -l
+
+To get info from elf file
+readelf
+
+To get size of a structure or any variable (no need to be running the code):
+gdb elf
+$ ptypes /o structure_to_analyse
